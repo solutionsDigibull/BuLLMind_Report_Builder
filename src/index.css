@@ -1,0 +1,179 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Light theme (default) ── */
+:root {
+  --bg-app:        #eef2f9;
+  --bg-header:     rgba(238,242,249,0.92);
+  --bg-surface:    #ffffff;
+  --bg-subtle:     #f8fafc;
+  --bg-input:      #f8fafc;
+  --border:        rgba(196,210,235,0.6);
+  --border-input:  rgba(196,210,235,0.8);
+  --text-primary:  #1e293b;
+  --text-secondary:#475569;
+  --text-muted:    #94a3b8;
+  --shadow-card:   0 1px 3px rgba(30,60,120,0.06), 0 4px 16px rgba(30,60,120,0.06);
+  --shadow-header: 0 1px 0 0 rgba(174,197,232,0.3);
+  --border-header: rgba(196,210,235,0.7);
+}
+
+/* ── Dark theme ── */
+[data-theme="dark"] {
+  --bg-app:        #0d1117;
+  --bg-header:     rgba(13,17,23,0.92);
+  --bg-surface:    #161b27;
+  --bg-subtle:     #1e2636;
+  --bg-input:      #1e2636;
+  --border:        rgba(255,255,255,0.07);
+  --border-input:  rgba(255,255,255,0.1);
+  --text-primary:  #e2e8f0;
+  --text-secondary:#94a3b8;
+  --text-muted:    #4a6080;
+  --shadow-card:   0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.25);
+  --shadow-header: 0 1px 0 0 rgba(0,0,0,0.3);
+  --border-header: rgba(255,255,255,0.06);
+}
+
+@layer base {
+  body {
+    @apply antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+}
+
+@layer utilities {
+  /* Scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #334155 transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 99px;
+  }
+
+  /* Scrollbar light (for white panels) */
+  .scrollbar-light {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .scrollbar-light::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-light::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-light::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 99px;
+  }
+
+  /* Glassmorphism */
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Card hover lift */
+  .card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px -8px rgba(0,0,0,0.12);
+  }
+
+  /* Subtle glow on primary elements */
+  .glow-blue {
+    box-shadow: 0 0 0 1px rgba(59,130,246,0.15), 0 4px 16px -4px rgba(59,130,246,0.3);
+  }
+  .glow-blue:hover {
+    box-shadow: 0 0 0 1px rgba(59,130,246,0.3), 0 8px 24px -4px rgba(59,130,246,0.4);
+  }
+
+  /* Sidebar nav item animations */
+  .nav-item {
+    transition: background 0.15s ease, color 0.15s ease, padding-left 0.15s ease;
+  }
+
+  /* Fade in animation */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fade-up {
+    animation: fadeUp 0.3s ease forwards;
+  }
+
+  /* Shimmer effect for loading states */
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .shimmer {
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+/* ── Print / PDF Export ── */
+@media print {
+  /* Hide all UI chrome */
+  .no-print {
+    display: none !important;
+  }
+
+  /* White background, no app colour */
+  html, body {
+    background: #ffffff !important;
+  }
+
+  /* Un-clip the layout hierarchy so content flows */
+  html, body, #root {
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .h-screen, .h-full {
+    height: auto !important;
+  }
+  .overflow-hidden, .overflow-auto {
+    overflow: visible !important;
+  }
+
+  /* Remove canvas dot-grid background */
+  .canvas-print-area {
+    background-image: none !important;
+    background-color: #ffffff !important;
+  }
+
+  /* Page setup — A4 landscape fits most dashboards */
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+}
