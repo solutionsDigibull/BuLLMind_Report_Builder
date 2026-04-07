@@ -286,6 +286,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'prod-efficiency-dashboard',
+    thumbnail: '/thumbnails/production-efficiency.jpg',
     name: 'Production Efficiency Dashboard',
     description: 'Track OEE, throughput, and downtime patterns — ideal for CEO and operations directors.',
     category: 'PRODUCTION',
@@ -301,6 +302,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'prod-machine-performance',
+    thumbnail: '/thumbnails/machine-performance-report.png',
     name: 'Machine Performance Report',
     description: 'Monitor equipment uptime, fault frequency, and MTTR for maintenance managers.',
     category: 'PRODUCTION',
@@ -316,6 +318,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'prod-shift-report',
+    thumbnail: '/thumbnails/shift-wise-output-report.webp',
     name: 'Shift-wise Output Report',
     description: 'Compare A/B/C shift performance on output, quality, and utilization for production managers.',
     category: 'PRODUCTION',
@@ -331,6 +334,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'prod-vs-target',
+    thumbnail: '/thumbnails/production-vs-target-report.jpg',
     name: 'Production vs Target Report',
     description: 'Variance analysis between planned and actual production — for management review meetings.',
     category: 'PRODUCTION',
@@ -348,6 +352,7 @@ export const TEMPLATES: Template[] = [
   // ─── FINANCE (5) ──────────────────────────────────────────────────────────
   {
     id: 'fin-pl-summary',
+    thumbnail: '/thumbnails/monthly-pl-summary.png',
     name: 'Monthly P&L Summary',
     description: 'Revenue, cost, and profit snapshot for CEO and CFO — the top-level financial health report.',
     category: 'FINANCE',
@@ -363,6 +368,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'fin-cogs-report',
+    thumbnail: '/thumbnails/cogs-report.avif',
     name: 'Cost of Goods Sold (COGS) Report',
     description: 'Breakdown of direct production costs by product and category for finance managers.',
     category: 'FINANCE',
@@ -378,6 +384,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'fin-cash-flow',
+    thumbnail: '/thumbnails/cash-flow-dashboard.png',
     name: 'Cash Flow Dashboard',
     description: 'Track cash inflows, outflows, and net position — critical for CFO and directors.',
     category: 'FINANCE',
@@ -393,6 +400,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'fin-budget-vs-actual',
+    thumbnail: '/thumbnails/budget-vs-actual-report.png',
     name: 'Budget vs Actual Report',
     description: 'Department-wise comparison of budgeted vs actual spend for management review.',
     category: 'FINANCE',
@@ -408,6 +416,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'fin-expense-analysis',
+    thumbnail: '/thumbnails/expense-analysis-report.jpg',
     name: 'Expense Analysis Report',
     description: 'Categorized expense breakdown with trend analysis for finance teams.',
     category: 'FINANCE',
@@ -425,6 +434,7 @@ export const TEMPLATES: Template[] = [
   // ─── INVENTORY (5) ────────────────────────────────────────────────────────
   {
     id: 'inv-health-monitor',
+    thumbnail: '/thumbnails/inventory-health-monitor.jpg',
     name: 'Inventory Health Monitor',
     description: 'Identify stock-outs, overstocks, and reorder points across all warehouses.',
     category: 'INVENTORY',
@@ -440,6 +450,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'inv-stock-aging',
+    thumbnail: '/thumbnails/stock-aging-report.png',
     name: 'Stock Aging Report',
     description: 'Identify slow-moving and obsolete inventory by age brackets for inventory managers.',
     category: 'INVENTORY',
@@ -455,6 +466,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'inv-reorder-level',
+    thumbnail: '/thumbnails/reorder-level-dashboard.jpg',
     name: 'Reorder Level Dashboard',
     description: 'Flag items at or below reorder point to prevent production stoppages — for supply chain managers.',
     category: 'INVENTORY',
@@ -470,6 +482,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'inv-warehouse-util',
+    thumbnail: '/thumbnails/warehouse-utilization-report.jpg',
     name: 'Warehouse Utilization Report',
     description: 'Track capacity utilization, overstock zones, and space efficiency across warehouses.',
     category: 'INVENTORY',
@@ -485,6 +498,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'inv-turnover',
+    thumbnail: '/thumbnails/inventory-turnover-report.jpg',
     name: 'Inventory Turnover Report',
     description: 'Measure how efficiently inventory is sold and replenished — for CEO and management.',
     category: 'INVENTORY',
@@ -502,6 +516,7 @@ export const TEMPLATES: Template[] = [
   // ─── PURCHASING (5) ───────────────────────────────────────────────────────
   {
     id: 'pur-po-summary',
+    thumbnail: '/thumbnails/purchase-order-summary.png',
     name: 'Purchase Order Summary',
     description: 'Overview of open, pending, and completed POs — for purchase managers.',
     category: 'PURCHASING',
@@ -517,6 +532,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'pur-vendor-performance',
+    thumbnail: '/thumbnails/vendor-performance-report.jpg',
     name: 'Vendor Performance Report',
     description: 'Rate suppliers on delivery, quality, and lead time — for procurement managers.',
     category: 'PURCHASING',
@@ -532,6 +548,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'pur-spend-analysis',
+    thumbnail: '/thumbnails/spend-analysis-dashboard.png',
     name: 'Spend Analysis Dashboard',
     description: 'Category-wise procurement spend with savings opportunities — for CFO and management.',
     category: 'PURCHASING',
@@ -547,6 +564,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'pur-vs-budget',
+    thumbnail: '/thumbnails/purchase-vs-budget-report.jpg',
     name: 'Purchase vs Budget Report',
     description: 'Compare actual purchase spend against approved budget by department.',
     category: 'PURCHASING',
@@ -562,6 +580,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'pur-lead-time',
+    thumbnail: '/thumbnails/supplier-lead-time-report.png',
     name: 'Supplier Lead Time Report',
     description: 'Analyze supplier lead times and delays to improve procurement planning.',
     category: 'PURCHASING',
@@ -579,6 +598,7 @@ export const TEMPLATES: Template[] = [
   // ─── QUALITY (5) ──────────────────────────────────────────────────────────
   {
     id: 'qual-control-dashboard',
+    thumbnail: '/thumbnails/quality-control-dashboard.jpg',
     name: 'Quality Control Dashboard',
     description: 'Monitor defect rates, inspection results, and corrective actions in real time.',
     category: 'QUALITY',
@@ -594,6 +614,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'qual-defect-analysis',
+    thumbnail: '/thumbnails/defect-analysis-report.png',
     name: 'Defect Analysis Report',
     description: 'Root-cause analysis of defects by type, product, and production line — for quality directors.',
     category: 'QUALITY',
@@ -609,6 +630,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'qual-first-pass-yield',
+    thumbnail: '/thumbnails/first-pass-yield-report.png',
     name: 'First Pass Yield Report',
     description: 'Measure units passing quality without rework on the first attempt — for production and QC managers.',
     category: 'QUALITY',
@@ -624,6 +646,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'qual-complaint-report',
+    thumbnail: '/thumbnails/customer-complaint-report.jpg',
     name: 'Customer Complaint Report',
     description: 'Track customer complaints by category, product, and resolution status — for management and CEO.',
     category: 'QUALITY',
@@ -639,6 +662,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'qual-inspection-summary',
+    thumbnail: '/thumbnails/inspection-summary-report.jpg',
     name: 'Inspection Summary Report',
     description: 'Aggregate view of all inspections — passed, failed, and pending — for QC teams.',
     category: 'QUALITY',
@@ -656,6 +680,7 @@ export const TEMPLATES: Template[] = [
   // ─── BOM (5) ──────────────────────────────────────────────────────────────
   {
     id: 'bom-cost-breakdown',
+    thumbnail: '/thumbnails/bom-cost-breakdown.png',
     name: 'BOM Cost Breakdown',
     description: 'Drill into component costs, material cost share, and cost optimization opportunities — for CFO and cost accountants.',
     category: 'BOM',
@@ -671,6 +696,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'bom-vs-actual',
+    thumbnail: '/thumbnails/bom-vs-actual-consumption.png',
     name: 'BOM vs Actual Consumption',
     description: 'Compare standard BOM quantities against actual material consumed in production.',
     category: 'BOM',
@@ -686,6 +712,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'bom-component-availability',
+    thumbnail: '/thumbnails/component-availability-report.png',
     name: 'Component Availability Report',
     description: 'Check which BOM components are available, short, or on order before production starts.',
     category: 'BOM',
@@ -701,6 +728,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'bom-multi-level',
+    thumbnail: '/thumbnails/multi-level-bom-summary.png',
     name: 'Multi-level BOM Summary',
     description: 'Overview of finished goods, sub-assemblies, and raw materials across all BOM levels.',
     category: 'BOM',
@@ -716,6 +744,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: 'bom-revision-history',
+    thumbnail: '/thumbnails/bom-revision-history.jpg',
     name: 'BOM Revision History',
     description: 'Audit trail of all BOM changes by version, component, and approver — for quality and engineering.',
     category: 'BOM',

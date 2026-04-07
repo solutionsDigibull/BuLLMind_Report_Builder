@@ -1,19 +1,13 @@
 import {
   Bell, Check, ChevronRight, FileText, HelpCircle, LayoutDashboard,
-  LayoutTemplate, Link, Moon, Palette, Search, Settings, Shield,
+  LayoutTemplate, Link, LogOut, Moon, Palette, Search, Settings, Shield,
   Sun, User, X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { TEMPLATES } from '../../pages/Templates'
 import { useStore } from '../../store/useStore'
 
-const NAV_LINKS = [
-  { label: 'Dashboard', to: '/dashboard' },
-  { label: 'Reports',   to: '/' },
-  { label: 'Templates', to: '/templates' },
-  { label: 'Analytics', to: '/analytics' },
-]
 
 const NOTIFICATIONS = [
   { id: 1, icon: '📊', title: 'Report ready', body: 'Production Q1 report has been processed.', time: '2m ago', read: false },
@@ -231,11 +225,16 @@ function SettingToggle({ label, value, onChange }: { label: string; value: boole
 
 // ── User profile panel ───────────────────────────────────────────────────────
 function UserPanel({ onClose }: { onClose: () => void }) {
-  const menuItems = [
-    { icon: <User size={13} />,     label: 'View Profile',       sub: 'Manage your account' },
-    { icon: <Shield size={13} />,   label: 'Privacy & Security', sub: 'Passwords, 2FA' },
-    { icon: <Settings size={13} />, label: 'Preferences',        sub: 'Display, language' },
-  ]
+  const { currentUser, logout } = useStore()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    logout()
+    onClose()
+    navigate('/login')
+  }
+
+  const initial = (currentUser?.name ?? 'U').charAt(0).toUpperCase()
 
   return (
     <Dropdown style={{ width: '260px' }}>
@@ -246,11 +245,15 @@ function UserPanel({ onClose }: { onClose: () => void }) {
             className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold shrink-0"
             style={{ background: 'linear-gradient(135deg,#4f8ef7,#7c5cfc)' }}
           >
-            A
+            {initial}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>Admin User</p>
-            <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>admin@bullmind.io</p>
+            <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>
+              {currentUser?.name ?? 'User'}
+            </p>
+            <p className="text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>
+              {currentUser?.email ?? ''}
+            </p>
           </div>
           <button onClick={onClose} className="w-6 h-6 flex items-center justify-center rounded-lg shrink-0 transition-colors" style={{ color: 'var(--text-muted)' }}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
@@ -261,25 +264,22 @@ function UserPanel({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      {/* Menu items */}
+      {/* Logout */}
       <div className="p-2">
-        {menuItems.map(item => (
-          <button
-            key={item.label}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors"
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-          >
-            <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>
-              {item.icon}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{item.label}</p>
-              <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{item.sub}</p>
-            </div>
-            <ChevronRight size={12} style={{ color: 'var(--text-muted)' }} />
-          </button>
-        ))}
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors"
+          onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
+          <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#fef2f2', color: '#ef4444' }}>
+            <LogOut size={13} />
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold" style={{ color: '#ef4444' }}>Sign out</p>
+            <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Log out of your account</p>
+          </div>
+        </button>
       </div>
     </Dropdown>
   )
@@ -351,15 +351,14 @@ function SearchBar() {
       <input
         value={query}
         onChange={e => { setQuery(e.target.value); setOpen(true) }}
-        onFocus={() => setOpen(true)}
+        onFocus={e => { setOpen(true); e.currentTarget.style.borderColor = '#7eb3f7'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(79,142,247,0.1)' }}
+        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(196,210,235,0.8)'; e.currentTarget.style.boxShadow = 'none' }}
         onKeyDown={e => {
           if (e.key === 'Escape') { setQuery(''); setOpen(false) }
         }}
         placeholder="Search reports, templates…"
         className="pl-8 pr-10 py-1.5 text-xs rounded-lg border outline-none transition-all"
         style={{ width: '220px', background: 'rgba(255,255,255,0.7)', borderColor: 'rgba(196,210,235,0.8)', color: '#334155' }}
-        onFocus={e => { e.currentTarget.style.borderColor = '#7eb3f7'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(79,142,247,0.1)' }}
-        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(196,210,235,0.8)'; e.currentTarget.style.boxShadow = 'none' }}
       />
       {query && (
         <button
@@ -528,23 +527,6 @@ export default function Header() {
         transition: 'background 0.25s ease, border-color 0.25s ease',
       }}
     >
-      {/* Nav */}
-      <nav className="flex items-center gap-1">
-        {NAV_LINKS.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            className={({ isActive }) =>
-              `px-3.5 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                isActive ? 'text-blue-600' : 'text-slate-500 hover:text-slate-800'
-              }`
-            }
-          >
-            {link.label}
-          </NavLink>
-        ))}
-      </nav>
-
       {/* Search */}
       <SearchBar />
 

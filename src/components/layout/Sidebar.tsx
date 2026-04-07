@@ -1,10 +1,14 @@
 import {
   Archive,
+  BarChart2,
   BookOpen,
+  ChevronDown,
   ChevronsLeft,
   ChevronsRight,
   Database,
   HelpCircle,
+  LayoutDashboard,
+  LineChart,
   MessageSquare,
   Plus,
   ShoppingCart,
@@ -18,7 +22,6 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useStore } from '../../store/useStore'
 import type { Department } from '../../types'
-import SupportFeedbackModal from './SupportFeedbackModal'
 
 const DEPT_ITEMS: { label: Department; icon: React.ReactNode; color: string; bg: string }[] = [
   { label: 'Purchasing', icon: <ShoppingCart size={14} />, color: '#fbbf24', bg: 'rgba(251,191,36,0.15)' },
@@ -29,17 +32,19 @@ const DEPT_ITEMS: { label: Department; icon: React.ReactNode; color: string; bg:
 ]
 
 const NAV_ITEMS = [
-  { label: 'Data Sources', to: '/',            icon: <Database size={14} /> },
+  { label: 'Dashboard',   to: '/dashboard',   icon: <LayoutDashboard size={14} /> },
+  { label: 'Data Sources', to: '/',           icon: <Database size={14} /> },
   { label: 'AI Insights',  to: '/ai-insights', icon: <Sparkles size={14} /> },
   { label: 'Templates',    to: '/library',     icon: <BookOpen size={14} /> },
+  { label: 'Analytics',    to: '/analytics',   icon: <LineChart size={14} /> },
   { label: 'Archive',      to: '/archive',     icon: <Archive size={14} /> },
 ]
 
 export default function Sidebar() {
   const { activeDepartment, setActiveDepartment } = useStore()
   const navigate = useNavigate()
-  const [modal, setModal] = useState<'support' | 'feedback' | null>(null)
   const [collapsed, setCollapsed] = useState(false)
+  const [deptOpen, setDeptOpen] = useState(true)
 
   return (
     <>
@@ -82,44 +87,59 @@ export default function Sidebar() {
           {/* Departments */}
           <div>
             {!collapsed && (
-              <p className="px-2 mb-2.5 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#4a6080' }}>
-                Departments
-              </p>
+              <button
+                onClick={() => setDeptOpen(v => !v)}
+                className="w-full flex items-center justify-between px-2 mb-1 group"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-widest transition-colors" style={{ color: '#4a6080' }}>
+                  Departments
+                </p>
+                <ChevronDown
+                  size={11}
+                  style={{
+                    color: '#4a6080',
+                    transform: deptOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+                    transition: 'transform 0.2s ease',
+                  }}
+                />
+              </button>
             )}
-            <div className="space-y-1">
-              {DEPT_ITEMS.map((item) => {
-                const isActive = activeDepartment === item.label
-                return (
-                  <button
-                    key={item.label}
-                    onClick={() => { setActiveDepartment(item.label); navigate('/') }}
-                    className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-lg text-xs font-semibold transition-all`}
-                    style={{
-                      background: isActive ? item.bg : 'transparent',
-                      color: isActive ? '#f1f5f9' : '#94afc8',
-                    }}
-                    title={collapsed ? item.label : undefined}
-                  >
-                    <span
-                      className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-all"
+            {(deptOpen || collapsed) && (
+              <div className="space-y-1">
+                {DEPT_ITEMS.map((item) => {
+                  const isActive = activeDepartment === item.label
+                  return (
+                    <button
+                      key={item.label}
+                      onClick={() => { setActiveDepartment(item.label); navigate('/') }}
+                      className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-lg text-xs font-semibold transition-all`}
                       style={{
-                        background: isActive ? item.bg : 'rgba(255,255,255,0.05)',
-                        color: isActive ? item.color : '#5a7a99',
+                        background: isActive ? item.bg : 'transparent',
+                        color: isActive ? '#f1f5f9' : '#94afc8',
                       }}
+                      title={collapsed ? item.label : undefined}
                     >
-                      {item.icon}
-                    </span>
-                    {!collapsed && item.label}
-                    {!collapsed && isActive && (
                       <span
-                        className="ml-auto w-1.5 h-1.5 rounded-full"
-                        style={{ background: item.color }}
-                      />
-                    )}
-                  </button>
-                )
-              })}
-            </div>
+                        className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-all"
+                        style={{
+                          background: isActive ? item.bg : 'rgba(255,255,255,0.05)',
+                          color: isActive ? item.color : '#5a7a99',
+                        }}
+                      >
+                        {item.icon}
+                      </span>
+                      {!collapsed && item.label}
+                      {!collapsed && isActive && (
+                        <span
+                          className="ml-auto w-1.5 h-1.5 rounded-full"
+                          style={{ background: item.color }}
+                        />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Workspace */}
@@ -195,28 +215,36 @@ export default function Sidebar() {
         {/* Footer */}
         <div className="px-3 pb-4 pt-2 space-y-0.5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           {[
-            { label: 'Support',  icon: <HelpCircle size={13} />,    fn: () => setModal('support') },
-            { label: 'Feedback', icon: <MessageSquare size={13} />, fn: () => setModal('feedback') },
-          ].map((btn) => (
-            <button
-              key={btn.label}
-              onClick={btn.fn}
-              className={`w-full flex items-center ${collapsed ? 'justify-center px-0' : 'gap-2.5 px-3'} py-2 rounded-lg text-xs font-medium transition-all`}
-              style={{ color: '#4a6080' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#94afc8'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#4a6080'; e.currentTarget.style.background = 'transparent' }}
-              title={collapsed ? btn.label : undefined}
+            { label: 'Support',  icon: <HelpCircle size={13} />,    to: '/support' },
+            { label: 'Feedback', icon: <MessageSquare size={13} />, to: '/feedback' },
+          ].map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              title={collapsed ? item.label : undefined}
+              style={({ isActive }) => ({
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: collapsed ? 'center' : undefined,
+                gap: collapsed ? undefined : '10px',
+                padding: collapsed ? '8px 0' : '8px 12px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 500,
+                transition: 'all 0.15s ease',
+                background: isActive ? 'rgba(79,142,247,0.1)' : 'transparent',
+                color: isActive ? '#94afc8' : '#4a6080',
+                textDecoration: 'none',
+              })}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#94afc8'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#4a6080'; (e.currentTarget as HTMLElement).style.background = 'transparent' }}
             >
-              {btn.icon}
-              {!collapsed && btn.label}
-            </button>
+              {item.icon}
+              {!collapsed && item.label}
+            </NavLink>
           ))}
         </div>
       </aside>
-
-      {modal && (
-        <SupportFeedbackModal initialMode={modal} onClose={() => setModal(null)} />
-      )}
     </>
   )
 }

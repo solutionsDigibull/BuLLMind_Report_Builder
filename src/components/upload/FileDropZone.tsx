@@ -2,11 +2,17 @@ import { Upload } from 'lucide-react'
 import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useStore } from '../../store/useStore'
-import { parseFile } from '../../utils/fileParser'
 import { autoMapColumns } from '../../utils/columnMapper'
+import { apiJson, apiUpload } from '../../utils/api'
+import type { Row } from '../../types'
 
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2)
+}
+
+interface ServerUpload {
+  id: string; name: string; size: number; status: string
+  headers: string[]; uploadedAt: string
 }
 
 export default function FileDropZone() {
@@ -15,9 +21,9 @@ export default function FileDropZone() {
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       for (const file of acceptedFiles) {
-        const id = genId()
+        const tempId = genId()
         addUpload({
-          id,
+          id: tempId,
           name: file.name,
           size: file.size,
           status: 'PROCESSING',
@@ -29,14 +35,25 @@ export default function FileDropZone() {
         })
 
         try {
-          const { headers, rows } = await parseFile(file)
-          const mappings = autoMapColumns(headers)
-
-          updateUpload(id, { headers, rows, mappings, status: 'PROCESSING' })
-          openMapper(id)
+          const formData = new FormData()
+          formData.append('file', file)
+          const record = await apiUpload<ServerUpload>('/api/uploads', formData)
+          const rows = await apiJson<Row[]>(`/api/uploads/${record.id}/rows`)
+          const mappings = autoMapColumns(record.headers)
+          // Replace the optimistic entry (including its id) with the server record
+          updateUpload(tempId, {
+            id: record.id,
+            headers: record.headers,
+            rows,
+            mappings,
+            standardizedRows: [],
+            uploadedAt: new Date(record.uploadedAt),
+            status: 'PROCESSING',
+          })
+          openMapper(record.id)
         } catch (err) {
-          updateUpload(id, { status: 'ERROR' })
-          showToast(`Failed to parse ${file.name}`, 'error')
+          updateUpload(tempId, { status: 'ERROR' })
+          showToast(`Failed to upload ${file.name}`, 'error')
         }
       }
     },

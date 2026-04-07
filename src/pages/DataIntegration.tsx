@@ -24,12 +24,8 @@ import WebScrapingSource from '../components/datasources/WebScrapingSource'
 import FileDropZone from '../components/upload/FileDropZone'
 import RecentUploads from '../components/upload/RecentUploads'
 import { useStore } from '../store/useStore'
-import type { AnalysisPurpose, Department } from '../types'
 import { STANDARD_FIELD_LABELS } from '../utils/columnMapper'
 import { exportToCsv } from '../utils/exportCsv'
-
-const PURPOSES: AnalysisPurpose[] = ['Deep Analysis', 'Summary', 'Trend Analysis', 'Audit']
-const DEPARTMENTS: Department[] = ['Purchasing', 'Production', 'Quality', 'Sales', 'Finance']
 
 const DATA_SOURCES = [
   {
@@ -100,11 +96,7 @@ const SAP_SOURCE = {
 
 export default function DataIntegration() {
   const {
-    analysisPurpose,
-    activeDepartment,
     activeDataSource,
-    setAnalysisPurpose,
-    setActiveDepartment,
     setActiveDataSource,
     uploads,
     activeFileId,
@@ -173,45 +165,6 @@ export default function DataIntegration() {
           <Download size={14} />
           Export Report
         </button>
-      </div>
-
-      {/* Purpose + Department */}
-      <div className="flex flex-wrap items-center gap-4 mb-5">
-        <div>
-          <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
-            Analysis Purpose
-          </label>
-          <select
-            value={analysisPurpose}
-            onChange={(e) => setAnalysisPurpose(e.target.value as AnalysisPurpose)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
-          >
-            {PURPOSES.map((p) => (
-              <option key={p}>{p}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
-            Select Department
-          </label>
-          <div className="flex gap-1 flex-wrap">
-            {DEPARTMENTS.map((dept) => (
-              <button
-                key={dept}
-                onClick={() => setActiveDepartment(dept)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  activeDepartment === dept
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {dept}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Data Source Selection */}
@@ -375,7 +328,7 @@ export default function DataIntegration() {
       )}
 
       {/* Upload area + Quick Stats side by side */}
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-3 gap-5 mt-6">
         <div className="col-span-2 space-y-4">
           {activeDataSource === 'file' && <FileDropZone />}
           {activeDataSource === 'spreadsheet' && <SpreadsheetLinkSource />}

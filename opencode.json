@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "tools": [
+    {
+      "name": "bullmind",
+      "description": "BuLLMind Report Builder — generate manufacturing reports, dashboards, and data insights",
+      "url": "http://localhost:5173/embed",
+      "icon": "http://localhost:5173/bull-icon.png"
+    }
+  ]
+}

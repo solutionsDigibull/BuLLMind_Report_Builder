@@ -1,6 +1,8 @@
-import { BarChart2, Eye, EyeOff, Lock, Mail, Shield, Zap } from 'lucide-react'
+import { BarChart2, Eye, EyeOff, Lock, Mail, Shield, User, Zap } from 'lucide-react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
+import { apiJson } from '../utils/api'
 
 const FEATURES = [
   { icon: <BarChart2 size={15} />, text: 'Drag & drop report builder' },
@@ -9,8 +11,16 @@ const FEATURES = [
 ]
 
 export default function Login() {
-  const { login, showToast } = useStore()
+  const { login, showToast, isLoggedIn } = useStore()
+  const navigate = useNavigate()
+
+  if (isLoggedIn) {
+    navigate('/', { replace: true })
+    return null
+  }
+  const [mode, setMode]         = useState<'login' | 'register'>('login')
   const [email, setEmail]       = useState('')
+  const [name, setName]         = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw]     = useState(false)
   const [loading, setLoading]   = useState(false)
@@ -20,17 +30,28 @@ export default function Login() {
     e.preventDefault()
     setError('')
     if (!email.trim() || !password.trim()) {
-      setError('Please enter your email and password.')
+      setError('Please fill in all fields.')
       return
     }
     setLoading(true)
-    // Simulate network delay
-    await new Promise(r => setTimeout(r, 800))
-    const ok = login(email.trim(), password)
-    if (!ok) {
-      setError('Invalid credentials. Please try again.')
-    } else {
-      showToast('Welcome back!', 'success')
+    try {
+      if (mode === 'register') {
+        if (!name.trim()) { setError('Please enter your name.'); setLoading(false); return }
+        await apiJson('/api/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ email: email.trim(), name: name.trim(), password }),
+        })
+        // Auto-login after register
+      }
+      const ok = await login(email.trim(), password)
+      if (!ok) {
+        setError('Invalid credentials. Please try again.')
+      } else {
+        showToast(mode === 'register' ? 'Account created! Welcome!' : 'Welcome back!', 'success')
+        navigate('/', { replace: true })
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.')
     }
     setLoading(false)
   }
@@ -111,12 +132,37 @@ export default function Login() {
             <span className="font-bold text-slate-800">BuLLMind</span>
           </div>
 
-          <h2 className="text-xl font-bold mb-1" style={{ color: '#1e293b' }}>Sign in</h2>
+          <h2 className="text-xl font-bold mb-1" style={{ color: '#1e293b' }}>
+            {mode === 'login' ? 'Sign in' : 'Create account'}
+          </h2>
           <p className="text-xs mb-7" style={{ color: '#94a3b8' }}>
-            Enter any email &amp; password to continue
+            {mode === 'login' ? 'Sign in to your BuLLMind account' : 'Create a new BuLLMind account'}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Name — register only */}
+            {mode === 'register' && (
+              <div>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: '#475569' }}>
+                  Full name
+                </label>
+                <div className="relative">
+                  <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#94a3b8' }} />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={e => { setName(e.target.value); setError('') }}
+                    placeholder="Your name"
+                    autoComplete="name"
+                    className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl outline-none transition-all"
+                    style={{ border: '1px solid rgba(196,210,235,0.8)', background: '#f8fafc', color: '#1e293b' }}
+                    onFocus={e => { e.currentTarget.style.borderColor = '#7eb3f7'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(79,142,247,0.1)' }}
+                    onBlur={e => { e.currentTarget.style.borderColor = 'rgba(196,210,235,0.8)'; e.currentTarget.style.boxShadow = 'none' }}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Email */}
             <div>
               <label className="block text-xs font-semibold mb-1.5" style={{ color: '#475569' }}>
@@ -184,16 +230,6 @@ export default function Login() {
               </p>
             )}
 
-            {/* Forgot */}
-            <div className="flex justify-end">
-              <button type="button" className="text-xs font-medium transition-colors" style={{ color: '#4f8ef7' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#2563eb'}
-                onMouseLeave={e => e.currentTarget.style.color = '#4f8ef7'}
-              >
-                Forgot password?
-              </button>
-            </div>
-
             {/* Submit */}
             <button
               type="submit"
@@ -211,19 +247,22 @@ export default function Login() {
                     <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity="0.3" />
                     <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
                   </svg>
-                  Signing in…
+                  {mode === 'login' ? 'Signing in…' : 'Creating account…'}
                 </span>
-              ) : 'Sign in'}
+              ) : (mode === 'login' ? 'Sign in' : 'Create account')}
             </button>
           </form>
 
           <p className="text-center text-[11px] mt-6" style={{ color: '#94a3b8' }}>
-            Don't have an account?{' '}
-            <button className="font-semibold transition-colors" style={{ color: '#4f8ef7' }}
+            {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+            <button
+              className="font-semibold transition-colors"
+              style={{ color: '#4f8ef7' }}
               onMouseEnter={e => e.currentTarget.style.color = '#2563eb'}
               onMouseLeave={e => e.currentTarget.style.color = '#4f8ef7'}
+              onClick={() => { setMode(m => m === 'login' ? 'register' : 'login'); setError('') }}
             >
-              Contact your admin
+              {mode === 'login' ? 'Create account' : 'Sign in'}
             </button>
           </p>
         </div>

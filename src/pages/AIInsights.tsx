@@ -18,71 +18,11 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
+import { checkOpenWorkAI, fetchAvailableTools, openWorkChatStream } from '../utils/openworkai'
 
-// ─── Ollama client ────────────────────────────────────────────────────────────
+// ─── OpenWork AI client ─── (see src/utils/openworkai.ts) ────────────────────
 
-const OLLAMA_BASE = 'http://localhost:11434'
-const DEFAULT_MODEL = 'llama3.2'
-
-async function checkOllama(): Promise<{ running: boolean; models: string[] }> {
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), 3000)
-  try {
-    const res = await fetch(`${OLLAMA_BASE}/api/tags`, { signal: controller.signal })
-    clearTimeout(timer)
-    if (!res.ok) return { running: false, models: [] }
-    const data = await res.json() as { models?: { name: string }[] }
-    const models = (data.models ?? []).map((m) => m.name)
-    return { running: true, models }
-  } catch {
-    clearTimeout(timer)
-    return { running: false, models: [] }
-  }
-}
-
-async function ollamaChatStream(
-  model: string,
-  userText: string,
-  systemPrompt: string,
-  onToken: (token: string) => void,
-): Promise<string> {
-  const res = await fetch(`${OLLAMA_BASE}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userText },
-      ],
-      stream: true,
-    }),
-  })
-  if (!res.ok) throw new Error(`Ollama responded with status ${res.status}`)
-
-  const reader = res.body?.getReader()
-  const decoder = new TextDecoder()
-  let full = ''
-
-  if (!reader) throw new Error('No response body')
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    const chunk = decoder.decode(value, { stream: true })
-    for (const line of chunk.split('\n')) {
-      if (!line.trim()) continue
-      try {
-        const json = JSON.parse(line) as { message?: { content?: string }; done?: boolean }
-        const token = json.message?.content ?? ''
-        full += token
-        onToken(token)
-      } catch { /* partial line, skip */ }
-    }
-  }
-
-  return full
-}
+const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-5'
 
 // ─── Chat types & helpers ────────────────────────────────────────────────────
 
@@ -253,9 +193,9 @@ function parseAIResponse(raw: string): { text: string; card?: GeneratedCard } {
   }
 }
 
-// ─── Ollama setup panel ───────────────────────────────────────────────────────
+// ─── OpenWork setup panel ─────────────────────────────────────────────────────
 
-function OllamaSetupPanel({ onRetry, checking }: { onRetry: () => void; checking: boolean }) {
+function OpenWorkSetupPanel({ onRetry, checking }: { onRetry: () => void; checking: boolean }) {
   const [expanded, setExpanded] = useState(true)
 
   return (
@@ -265,8 +205,8 @@ function OllamaSetupPanel({ onRetry, checking }: { onRetry: () => void; checking
         className="w-full flex items-center gap-2.5 px-4 py-3 hover:bg-amber-100 transition-colors text-left"
       >
         <WifiOff size={14} className="text-amber-600 shrink-0" />
-        <span className="text-sm font-semibold text-amber-800">Ollama not detected</span>
-        <span className="text-xs text-amber-600 ml-1">— AI chat requires a local Ollama instance</span>
+        <span className="text-sm font-semibold text-amber-800">OpenWork AI not detected</span>
+        <span className="text-xs text-amber-600 ml-1">— AI chat requires OpenWork running locally</span>
         <span className="ml-auto text-amber-500">
           {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </span>
@@ -275,7 +215,7 @@ function OllamaSetupPanel({ onRetry, checking }: { onRetry: () => void; checking
       {expanded && (
         <div className="px-4 pb-4 space-y-4 border-t border-amber-200">
           <p className="text-xs text-amber-700 pt-3">
-            BuLLMind uses <strong>Ollama</strong> — a free, local LLM engine. All AI processing happens on your machine. No data is sent externally.
+            BuLLMind uses <strong>OpenWork AI</strong> — an open-source agent platform. All AI processing happens on your machine via OpenCode.
           </p>
 
           {/* Steps */}
@@ -283,24 +223,24 @@ function OllamaSetupPanel({ onRetry, checking }: { onRetry: () => void; checking
             {[
               {
                 step: '1',
-                title: 'Install Ollama',
-                desc: 'Download and install from ollama.com (Windows / macOS / Linux)',
-                cmd: null,
-                link: 'https://ollama.com/download',
+                title: 'Install OpenWork',
+                desc: 'Install the OpenWork CLI globally:',
+                cmd: 'npm install -g openwrk',
+                link: null,
               },
               {
                 step: '2',
-                title: 'Pull a model',
+                title: 'Start OpenWork',
                 desc: 'Open a terminal and run:',
-                cmd: 'ollama pull llama3.2',
+                cmd: 'openwrk start',
                 link: null,
               },
               {
                 step: '3',
-                title: 'Start Ollama',
-                desc: 'Ollama usually starts automatically. If not, run:',
-                cmd: 'ollama serve',
-                link: null,
+                title: 'Check the dashboard',
+                desc: 'OpenWork dashboard shows all services green when ready.',
+                cmd: null,
+                link: 'https://github.com/different-ai/openwork',
               },
             ].map(({ step, title, desc, cmd, link }) => (
               <div key={step} className="flex gap-3 items-start">
@@ -448,7 +388,7 @@ const SUGGESTIONS = [
   'Summarise sales performance this quarter',
 ]
 
-type OllamaStatus = 'checking' | 'connected' | 'disconnected'
+type OpenWorkStatus = 'checking' | 'connected' | 'disconnected'
 
 export default function AIInsights() {
   const { uploads, activeFileId } = useStore()
@@ -459,9 +399,12 @@ export default function AIInsights() {
   const dataRows = activeFile?.standardizedRows ?? []
   const dataColumns = dataRows.length > 0 ? Object.keys(dataRows[0]) : []
 
-  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>('checking')
+  const [aiStatus, setAiStatus] = useState<OpenWorkStatus>('checking')
+  const [aiBackend, setAiBackend] = useState<string>('')
   const [availableModels, setAvailableModels] = useState<string[]>([])
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL)
+  const [availableTools, setAvailableTools] = useState<{ name: string; description: string }[]>([])
+  const [enabledTools, setEnabledTools] = useState<Set<string>>(new Set())
 
   const [messages, setMessages] = useState<Message[]>([{
     id: uid(),
@@ -473,22 +416,43 @@ export default function AIInsights() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  async function detectOllama() {
-    setOllamaStatus('checking')
-    const { running, models } = await checkOllama()
+  async function detectOpenWork(retries = 4) {
+    setAiStatus('checking')
+    let result = await checkOpenWorkAI()
+    // Retry a few times — the proxy server may still be booting when the page first loads
+    for (let i = 0; i < retries && !result.running; i++) {
+      await new Promise(r => setTimeout(r, 1500))
+      result = await checkOpenWorkAI()
+    }
+    const { running, models, via } = result
     if (running) {
+      setAiBackend(via)
       setAvailableModels(models)
-      // Pick best available model: prefer llama3.2, then first available
-      const preferred = ['llama3.2', 'llama3.1', 'llama3', 'mistral', 'phi3', 'gemma2']
-      const best = preferred.find(m => models.some(am => am.startsWith(m))) ?? models[0]
-      if (best) setSelectedModel(models.find(m => m.startsWith(best)) ?? models[0])
-      setOllamaStatus('connected')
+      const preferred = ['anthropic/claude-sonnet-4-6', 'anthropic/claude-sonnet-4-5', 'anthropic/claude-sonnet', 'anthropic/claude']
+      const best = preferred.find(p => models.some(m => m.startsWith(p)))
+      const chosenModel = best ? (models.find(m => m.startsWith(best)) ?? models[0]) : (models[0] ?? DEFAULT_MODEL)
+      setSelectedModel(chosenModel)
+      setAiStatus('connected')
+      // Load tools for the chosen model
+      if (chosenModel) {
+        const [providerID, ...rest] = chosenModel.split('/')
+        const tools = await fetchAvailableTools(providerID, rest.join('/'))
+        setAvailableTools(tools)
+      }
     } else {
-      setOllamaStatus('disconnected')
+      setAiStatus('disconnected')
     }
   }
 
-  useEffect(() => { detectOllama() }, [])
+  async function handleModelChange(model: string) {
+    setSelectedModel(model)
+    setEnabledTools(new Set())
+    const [providerID, ...rest] = model.split('/')
+    const tools = await fetchAvailableTools(providerID, rest.join('/'))
+    setAvailableTools(tools)
+  }
+
+  useEffect(() => { detectOpenWork() }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -504,25 +468,31 @@ export default function AIInsights() {
     setLoading(true)
 
     try {
-      if (ollamaStatus === 'connected') {
+      if (aiStatus === 'connected') {
         // Remove loading spinner — start showing streamed tokens immediately
         setMessages((m) =>
           m.map((msg) => msg.id === placeholderId ? { id: placeholderId, role: 'ai', text: '', loading: false } : msg)
         )
-        const raw = await ollamaChatStream(selectedModel, text.trim(), buildSystemPrompt(dataColumns), (token) => {
-          setMessages((m) =>
-            m.map((msg) => msg.id === placeholderId
-              ? { ...msg, text: msg.text + token, loading: false }
-              : msg)
-          )
-        })
+        const raw = await openWorkChatStream(
+          selectedModel,
+          text.trim(),
+          buildSystemPrompt(dataColumns),
+          (token) => {
+            setMessages((m) =>
+              m.map((msg) => msg.id === placeholderId
+                ? { ...msg, text: msg.text + token, loading: false }
+                : msg)
+            )
+          },
+          enabledTools.size > 0 ? [...enabledTools] : undefined,
+        )
         // Once streaming is done, parse for JSON card
         const { text: aiText, card } = parseAIResponse(raw)
         setMessages((m) =>
           m.map((msg) => msg.id === placeholderId ? { id: placeholderId, role: 'ai', text: aiText, card } : msg)
         )
       } else {
-        // Seed fallback when Ollama isn't connected
+        // Seed fallback when OpenWork isn't connected
         await new Promise((r) => setTimeout(r, 1000))
         const match = seedFallback(text)
         setMessages((m) =>
@@ -554,25 +524,26 @@ export default function AIInsights() {
         </div>
         <div>
           <h1 className="text-base font-bold text-gray-900">AI Insights</h1>
-          <p className="text-xs text-gray-400">Local AI · Powered by Ollama · Generate reports & dashboards</p>
+          <p className="text-xs text-gray-400">Local AI · Powered by OpenWork · Generate reports & dashboards</p>
         </div>
 
         {/* Connection status */}
         <div className="ml-auto flex items-center gap-2">
-          {ollamaStatus === 'checking' && (
+          {aiStatus === 'checking' && (
             <span className="flex items-center gap-1.5 text-[11px] text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
               <Loader2 size={11} className="animate-spin" /> Connecting…
             </span>
           )}
-          {ollamaStatus === 'connected' && (
+          {aiStatus === 'connected' && (
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1.5 text-[11px] text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
-                <CheckCircle2 size={11} className="text-green-500" /> Ollama connected
+                <CheckCircle2 size={11} className="text-green-500" />
+                {aiBackend === 'anthropic' ? 'Claude AI connected' : 'OpenWork connected'}
               </span>
               {availableModels.length > 0 && (
                 <select
                   value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
+                  onChange={(e) => handleModelChange(e.target.value)}
                   className="text-[11px] border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 >
                   {availableModels.map((m) => (
@@ -580,9 +551,33 @@ export default function AIInsights() {
                   ))}
                 </select>
               )}
+              {availableTools.length > 0 && (
+                <div className="flex items-center gap-1">
+                  {availableTools.slice(0, 4).map((t) => (
+                    <button
+                      key={t.name}
+                      title={t.description}
+                      onClick={() => setEnabledTools(prev => {
+                        const next = new Set(prev)
+                        next.has(t.name) ? next.delete(t.name) : next.add(t.name)
+                        return next
+                      })}
+                      className="text-[10px] px-2 py-0.5 rounded-full border transition-all"
+                      style={{
+                        background: enabledTools.has(t.name) ? '#eff6ff' : 'white',
+                        borderColor: enabledTools.has(t.name) ? '#93c5fd' : '#e2e8f0',
+                        color: enabledTools.has(t.name) ? '#2563eb' : '#64748b',
+                        fontWeight: enabledTools.has(t.name) ? 600 : 400,
+                      }}
+                    >
+                      {t.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-          {ollamaStatus === 'disconnected' && (
+          {aiStatus === 'disconnected' && (
             <span className="flex items-center gap-1.5 text-[11px] text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full">
               <WifiOff size={11} /> Not connected
             </span>
@@ -590,9 +585,9 @@ export default function AIInsights() {
         </div>
       </div>
 
-      {/* Ollama setup guide (shown only when disconnected) */}
-      {ollamaStatus === 'disconnected' && (
-        <OllamaSetupPanel onRetry={detectOllama} checking={false} />
+      {/* OpenWork setup guide (shown only when disconnected) */}
+      {aiStatus === 'disconnected' && (
+        <OpenWorkSetupPanel onRetry={detectOpenWork} checking={false} />
       )}
 
       {/* Data context banner — shown when file is loaded */}
@@ -642,7 +637,7 @@ export default function AIInsights() {
                   <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 flex items-center gap-2">
                     <Loader2 size={13} className="text-blue-500 animate-spin" />
                     <span className="text-sm text-gray-400">
-                      {ollamaStatus === 'connected' ? `Asking ${selectedModel}…` : 'Generating insights…'}
+                      {aiStatus === 'connected' ? `Asking ${selectedModel}…` : 'Generating insights…'}
                     </span>
                   </div>
                 ) : (
@@ -675,7 +670,7 @@ export default function AIInsights() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={
-              ollamaStatus === 'connected'
+              aiStatus === 'connected'
                 ? `Ask ${selectedModel} to generate a report or dashboard…`
                 : 'Ask AI to generate a report or dashboard…'
             }
@@ -690,9 +685,9 @@ export default function AIInsights() {
             <Send size={15} />
           </button>
         </form>
-        {ollamaStatus === 'disconnected' && (
+        {aiStatus === 'disconnected' && (
           <p className="text-[10px] text-amber-600 mt-1.5 text-center">
-            Ollama not connected — responses will use sample data. Set up Ollama above for real AI.
+            OpenWork not connected — responses will use sample data. Set up OpenWork above for real AI.
           </p>
         )}
       </div>

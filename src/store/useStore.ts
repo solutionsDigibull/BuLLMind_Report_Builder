@@ -9,15 +9,18 @@ import type {
   WidgetConfig,
 } from '../types'
 import { SEED_ACTIVE_FILE_ID, SEED_CANVAS_WIDGETS, SEED_FILES } from '../utils/seedData'
+import { apiJson } from '../utils/api'
 
 type DataSourceType = 'file' | 'spreadsheet' | 'scraping' | 'claude' | 'api' | 'notebook'
 
 interface AppState {
   // Auth
   isLoggedIn: boolean
-  currentUser: { name: string; email: string } | null
-  login: (email: string, password: string) => boolean
+  authReady: boolean
+  currentUser: { id: string; name: string; email: string } | null
+  login: (email: string, password: string) => Promise<boolean>
   logout: () => void
+  initAuth: () => Promise<void>
 
   // Theme
   theme: 'light' | 'dark' | 'system'
@@ -34,6 +37,7 @@ interface AppState {
   // Uploads
   uploads: UploadedFile[]
   activeFileId: string | null
+  loadUploads: () => Promise<void>
   addUpload: (file: UploadedFile) => void
   updateUpload: (id: string, patch: Partial<UploadedFile>) => void
   setActiveFile: (id: string) => void
@@ -69,8 +73,8 @@ interface AppState {
 
   // Archive
   archivedReports: ArchivedReport[]
-  saveToArchive: (report: Omit<ArchivedReport, 'id' | 'createdAt'>) => void
-  deleteFromArchive: (id: string) => void
+  saveToArchive: (report: Omit<ArchivedReport, 'id' | 'createdAt'>) => Promise<void>
+  deleteFromArchive: (id: string) => Promise<void>
   restoreFromArchive: (id: string) => void
 
   // Toast
@@ -81,14 +85,43 @@ interface AppState {
 
 export const useStore = create<AppState>((set, get) => ({
   isLoggedIn: false,
+  authReady: false,
   currentUser: null,
-  login: (email, password) => {
-    if (!email.trim() || !password.trim()) return false
-    const name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-    set({ isLoggedIn: true, currentUser: { name, email } })
-    return true
+  login: async (email, password) => {
+    try {
+      // Server sets HttpOnly cookie — response only contains user (no token in body)
+      const data = await apiJson<{ user: { id: string; name: string; email: string } }>(
+        '/api/auth/login',
+        { method: 'POST', body: JSON.stringify({ email, password }) }
+      )
+      set({ isLoggedIn: true, currentUser: data.user })
+      const [archives] = await Promise.all([
+        apiJson<ArchivedReport[]>('/api/archives'),
+        get().loadUploads(),
+      ])
+      set({ archivedReports: archives.map(a => ({ ...a, createdAt: new Date(a.createdAt) })) })
+      return true
+    } catch {
+      return false
+    }
   },
-  logout: () => set({ isLoggedIn: false, currentUser: null }),
+  logout: async () => {
+    try { await apiJson('/api/auth/logout', { method: 'POST' }) } catch { /* best-effort */ }
+    set({ isLoggedIn: false, currentUser: null, archivedReports: [] })
+  },
+  initAuth: async () => {
+    try {
+      const user = await apiJson<{ id: string; name: string; email: string }>('/api/auth/me')
+      set({ isLoggedIn: true, currentUser: user, authReady: true })
+      const [archives] = await Promise.all([
+        apiJson<ArchivedReport[]>('/api/archives'),
+        get().loadUploads(),
+      ])
+      set({ archivedReports: archives.map(a => ({ ...a, createdAt: new Date(a.createdAt) })) })
+    } catch {
+      set({ authReady: true }) // no valid session — stay logged out, but unblock the guard
+    }
+  },
 
   theme: 'light',
   setTheme: (t) => set({ theme: t }),
@@ -102,17 +135,41 @@ export const useStore = create<AppState>((set, get) => ({
 
   uploads: [],
   activeFileId: null,
+  loadUploads: async () => {
+    try {
+      const records = await apiJson<Array<{
+        id: string; name: string; size: number; status: string
+        headers: string[]; uploadedAt: string
+        mappings: Array<{ sourceColumn: string; targetField: string; confidence: number; fieldType?: string | null }>
+      }>>('/api/uploads')
+      set({
+        uploads: records.map(r => ({
+          id: r.id,
+          name: r.name,
+          size: r.size,
+          status: r.status === 'READY' ? 'READY TO REVIEW' : (r.status as UploadedFile['status']),
+          headers: r.headers,
+          rows: [],
+          standardizedRows: [],
+          mappings: r.mappings.map(m => ({ sourceColumn: m.sourceColumn, targetField: m.targetField, confidence: m.confidence, fieldType: m.fieldType ?? undefined })),
+          uploadedAt: new Date(r.uploadedAt),
+        })),
+      })
+    } catch { /* not logged in or server down — keep existing local state */ }
+  },
   addUpload: (file) => set((s) => ({ uploads: [...s.uploads, file] })),
   updateUpload: (id, patch) =>
     set((s) => ({
       uploads: s.uploads.map((u) => (u.id === id ? { ...u, ...patch } : u)),
     })),
   setActiveFile: (id) => set({ activeFileId: id }),
-  deleteUpload: (id) =>
+  deleteUpload: (id) => {
     set((s) => ({
       uploads: s.uploads.filter((u) => u.id !== id),
       activeFileId: s.activeFileId === id ? null : s.activeFileId,
-    })),
+    }))
+    apiJson(`/api/uploads/${id}`, { method: 'DELETE' }).catch(() => {})
+  },
 
   mappingFileId: null,
   openMapper: (fileId) => set({ mappingFileId: fileId }),
@@ -133,6 +190,11 @@ export const useStore = create<AppState>((set, get) => ({
     get().updateUpload(fileId, { mappings, standardizedRows, status: 'READY TO REVIEW' })
     set({ mappingFileId: null, activeFileId: fileId })
     get().showToast('Column mappings applied — data is ready!', 'success')
+    // Persist mappings to DB — fire-and-forget
+    apiJson(`/api/uploads/${fileId}/mappings`, {
+      method: 'PUT',
+      body: JSON.stringify({ mappings }),
+    }).catch(() => {})
   },
 
   canvasWidgets: [],
@@ -223,67 +285,34 @@ export const useStore = create<AppState>((set, get) => ({
       return { favoriteTemplates: next }
     }),
 
-  archivedReports: [
-    {
-      id: 'arc-1',
-      title: 'BOM Report — Project Phoenix',
-      department: 'Production',
-      widgetCount: 6,
-      widgets: [],
-      source: 'builder',
-      tags: ['BOM', 'Costing'],
-      createdAt: new Date('2026-03-10T09:30:00'),
-    },
-    {
-      id: 'arc-2',
-      title: 'Purchasing Spend Analysis Q1',
-      department: 'Purchasing',
-      widgetCount: 5,
-      widgets: [],
-      source: 'builder',
-      tags: ['Spend', 'Vendors'],
-      createdAt: new Date('2026-03-15T14:00:00'),
-    },
-    {
-      id: 'arc-3',
-      title: 'Production Efficiency Dashboard',
-      department: 'Production',
-      widgetCount: 6,
-      widgets: [],
-      source: 'ai',
-      tags: ['OEE', 'Downtime'],
-      createdAt: new Date('2026-03-18T11:15:00'),
-    },
-    {
-      id: 'arc-4',
-      title: 'Logistics Overview — March',
-      department: 'Logistics',
-      widgetCount: 4,
-      widgets: [],
-      source: 'ai',
-      tags: ['Shipments', 'Delivery'],
-      createdAt: new Date('2026-03-22T08:45:00'),
-    },
-    {
-      id: 'arc-5',
-      title: 'Quality Control Summary',
-      department: 'Quality',
-      widgetCount: 6,
-      widgets: [],
-      source: 'builder',
-      tags: ['Defects', 'Inspection'],
-      createdAt: new Date('2026-03-25T16:20:00'),
-    },
-  ] as ArchivedReport[],
-  saveToArchive: (report) =>
-    set((s) => ({
-      archivedReports: [
-        { ...report, id: `arc-${Date.now()}`, createdAt: new Date() },
-        ...s.archivedReports,
-      ],
-    })),
-  deleteFromArchive: (id) =>
-    set((s) => ({ archivedReports: s.archivedReports.filter((r) => r.id !== id) })),
+  archivedReports: [],
+  saveToArchive: async (report) => {
+    try {
+      const saved = await apiJson<ArchivedReport>('/api/archives', {
+        method: 'POST',
+        body: JSON.stringify(report),
+      })
+      set((s) => ({
+        archivedReports: [{ ...saved, createdAt: new Date(saved.createdAt) }, ...s.archivedReports],
+      }))
+      get().showToast('Report archived!', 'success')
+    } catch {
+      // Fallback to local save if not logged in
+      set((s) => ({
+        archivedReports: [
+          { ...report, id: `arc-${Date.now()}`, createdAt: new Date() },
+          ...s.archivedReports,
+        ],
+      }))
+      get().showToast('Report archived locally!', 'success')
+    }
+  },
+  deleteFromArchive: async (id) => {
+    set((s) => ({ archivedReports: s.archivedReports.filter((r) => r.id !== id) }))
+    try {
+      await apiJson(`/api/archives/${id}`, { method: 'DELETE' })
+    } catch { /* already removed from local state */ }
+  },
   restoreFromArchive: (id) => {
     const report = get().archivedReports.find((r) => r.id === id)
     if (!report) return
